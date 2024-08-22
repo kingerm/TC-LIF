@@ -19,7 +19,7 @@ from models.fc import ffMnist, fbMnist
 from utils import *
 
 
-def train(train_loader, model, criterion, optimizer, epoch, args):
+def train(train_loader, model, criterion, optimizer, epoch, args):  # 训练过程函数
     batch_time = AverageMeter('Time', ':6.3f')
     data_time = AverageMeter('Data', ':6.3f')
     losses = AverageMeter('Loss', ':.4e')
@@ -35,18 +35,18 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
     end = time.time()
     for i, (images, target) in enumerate(train_loader):
         # measure data loading time
-        data_time.update(time.time() - end)
-        images = images.cuda(non_blocking=True)  # images:[bs, 1, 28, 28]
-        target = target.cuda(non_blocking=True)
+        data_time.update(time.time() - end)  # 计时
+        images = images.cuda(non_blocking=True)  # images:[bs, 1, 28, 28]  # bs是256
+        target = target.cuda(non_blocking=True)  # 就是gt label
         # print(type(target[0][0]))
 
         input_im = images.view(-1, args.time_window, 1)  # input_im:[bs, 784, 1]
-
+        # 把image从三维拉成二维，因为过的是纯MLP结构，和CNN有差别
         if args.task == 'PSMNIST':
             input_im = input_im[:, perm, :]
 
         reset_states(model=model)
-        output = model(input_im)
+        output = model(input_im)  # output为[bs, 10]，为分类结果
         loss = criterion(output, target)
 
         # measure accuracy and record loss
@@ -165,7 +165,7 @@ parser.add_argument('--ind', default=1, type=int, help='input dim: 1, 4, 8')
 
 args = parser.parse_args()
 
-perm = torch.randperm(784)
+perm = torch.randperm(784)  # 将0-783随机打乱后获得的整数序列
 
 if args.results_dir == '':
     args.results_dir = './cs-' + datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
@@ -181,7 +181,7 @@ torch.backends.cudnn.benchmark = True
 # build dataloaders
 if args.task == 'SMNIST' or args.task == 'PSMNIST':
     train_loader, test_loader, num_classes = load_dataset(dataset='MNIST', batch_size=args.batch_size,
-                                                          dataset_path='/datasets/', is_cuda=True,
+                                                          dataset_path='../datasets', is_cuda=True,
                                                           num_workers=args.workers)
     args.time_window = 784
     in_dim = args.ind
@@ -212,11 +212,11 @@ elif args.neuron == 'alif':
     node = ALIF
 
 # initialize the learnable betas
-beta = torch.full([1, 2], 0., dtype=torch.float)
+beta = torch.full([1, 2], 0., dtype=torch.float)  # 创建一个size为(1, 2)的tensor，值全为0.
 beta[0][0] = args.beta1
 beta[0][1] = args.beta2
-init1 = torch.sigmoid(beta[0][0]).cpu().item()
-init2 = torch.sigmoid(beta[0][1]).cpu().item()
+init1 = torch.sigmoid(beta[0][0]).cpu().item()  # 对应论文中的-sigmoid(c1)
+init2 = torch.sigmoid(beta[0][1]).cpu().item()  # 对应论文中的sigmoid(c2)
 print("beta init from {:.2f} and {:.2f}".format(-init1, init2))
 
 spk_params = {"time_window": args.time_window,
@@ -227,7 +227,7 @@ spk_params = {"time_window": args.time_window,
               'decay_factor': beta,
               'gamma': args.gamma}
 
-spiking_neuron = partial(node,
+spiking_neuron = partial(node,  # 初始化神经元，partial为固定函数的部分形参，后续调用时不用再输入
                          v_threshold=spk_params['v_threshold'],
                          surrogate_function=spk_params['surrogate_function'],
                          hard_reset=spk_params['hard_reset'],
@@ -237,7 +237,7 @@ spiking_neuron = partial(node,
 
 if args.task == 'SMNIST':
     if args.network == 'ff':
-        model = ffMnist(in_dim=in_dim, spiking_neuron=spiking_neuron).to(gpu)
+        model = ffMnist(in_dim=in_dim, spiking_neuron=spiking_neuron).to(gpu)  #
     elif args.network == 'fb':
         model = fbMnist(in_dim=in_dim, spiking_neuron=spiking_neuron).to(gpu)
 elif args.task == 'PSMNIST':
@@ -251,7 +251,7 @@ else:
 logging.info(str(model))
 para = utils.count_parameters(model)
 
-criterion = nn.CrossEntropyLoss().cuda(gpu)
+criterion = nn.CrossEntropyLoss().cuda(gpu)  # 使用交叉熵损失函数
 
 if args.optim == 'sgd':
     optimizer = torch.optim.SGD(model.parameters(), lr=args.lr, weight_decay=args.wd, momentum=0.9)
@@ -274,7 +274,7 @@ best_acc = argparse.Namespace(top1=0, top5=0)
 train_res = pd.DataFrame()
 test_res = pd.DataFrame()
 best = 0
-for epoch in range(start_epoch, args.epochs):
+for epoch in range(start_epoch, args.epochs):  # 开始训练
     flag = False
     adjust_learning_rate(optimizer, epoch, args)
 

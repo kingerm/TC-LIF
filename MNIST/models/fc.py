@@ -35,18 +35,18 @@ class fbMnist(nn.Module):
                    RecurrentContainer(spiking_neuron(v_threshold=1.0), hid_dim=256)]
         layers += [nn.Linear(256, 256),
                    spiking_neuron(v_threshold=1.0)]
-        layers += [nn.Linear(256, 10)]
+        layers += [nn.Linear(256, 10)]  # 在nn.Linear后面额外加上
         self.features = nn.Sequential(*layers)
         self.in_dim = in_dim
 
-    def forward(self, x):
+    def forward(self, x):  # 调用model的时候会跳转到这里。x为拉直后的image
         assert x.dim() == 3, "dimension of x is not correct!"  # x: [bs, 784, 1]
         output_current = []
         for time in range(x.size(1)):  # T loop
             start_idx = time
             if start_idx < (x.size(1) - self.in_dim):
                 x_t = x[:, start_idx:start_idx+self.in_dim, :].reshape(-1, self.in_dim)
-            else:
+            else:  # 类似RNN，一个个地生成结果，直到784
                 x_t = x[:, 784-self.in_dim:784, :].reshape(-1, self.in_dim)
             output_current.append(self.features(x_t))
         res = torch.stack(output_current, 0)

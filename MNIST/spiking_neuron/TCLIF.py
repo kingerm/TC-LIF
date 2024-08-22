@@ -70,7 +70,7 @@ class BaseNode(base.MemoryModule):
         return f'v_threshold={self.v_threshold}, v_reset={self.v_reset}, detach_reset={self.detach_reset}, step_mode={self.step_mode}, backend={self.backend}'
 
     def single_step_forward(self, x: torch.Tensor):
-        self.v_float_to_tensor(x)
+        self.v_float_to_tensor(x)  # layers中的相关调用是在这个函数里面
         self.neuronal_charge(x)
         spike = self.neuronal_fire()
         self.neuronal_reset(spike)
@@ -98,7 +98,7 @@ class BaseNode(base.MemoryModule):
             self.v = torch.full_like(x.data, v_init)
 
 
-class TCLIFNode(BaseNode):
+class TCLIFNode(BaseNode):  # 关键在看懂这个node。其他的都是很简单的神经网络训练过程
     def __init__(self,
                  v_threshold=1.,
                  v_reset=0.,
