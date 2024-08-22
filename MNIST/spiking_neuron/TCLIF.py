@@ -69,7 +69,7 @@ class BaseNode(base.MemoryModule):
     def extra_repr(self):
         return f'v_threshold={self.v_threshold}, v_reset={self.v_reset}, detach_reset={self.detach_reset}, step_mode={self.step_mode}, backend={self.backend}'
 
-    def single_step_forward(self, x: torch.Tensor):
+    def single_step_forward(self, x: torch.Tensor):  # 这是训练的时候的核心部分
         self.v_float_to_tensor(x)  # layers中的相关调用是在这个函数里面
         self.neuronal_charge(x)
         spike = self.neuronal_fire()
@@ -132,9 +132,9 @@ class TCLIFNode(BaseNode):  # 关键在看懂这个node。其他的都是很简�
     def neuronal_charge(self, x: torch.Tensor):
         # v1: membrane potential of dendritic compartment
         # v2: membrane potential of somatic compartment
-        self.names['v1'] = self.names['v1'] - torch.sigmoid(self.decay_factor[0][0]) * self.names['v2'] + x
-        self.names['v2'] = self.names['v2'] + torch.sigmoid(self.decay_factor[0][1]) * self.names['v1']
-        self.v = self.names['v2']
+        self.names['v1'] = self.names['v1'] - torch.sigmoid(self.decay_factor[0][0]) * self.names['v2'] + x  # self.decay_factor[0][0]是beta1
+        self.names['v2'] = self.names['v2'] + torch.sigmoid(self.decay_factor[0][1]) * self.names['v1']  # self.decay_factor[0][1]是beta2
+        self.v = self.names['v2']  # x是已经经过nn.Linear层的输出，即I(t)
 
     def neuronal_reset(self, spike):
         if self.detach_reset:
@@ -144,15 +144,15 @@ class TCLIFNode(BaseNode):  # 关键在看懂这个node。其他的都是很简�
 
         if not self.hard_reset:
             # soft reset
-            self.names['v1'] = self.jit_soft_reset(self.names['v1'], spike_d, self.gamma)
+            self.names['v1'] = self.jit_soft_reset(self.names['v1'], spike_d, self.gamma)  # 这是放电过程。gamma小于1使得树突室为部分放电
             self.names['v2'] = self.jit_soft_reset(self.names['v2'], spike_d, self.v_threshold)
-        else:
+        else:  # 论文里采用的是soft reset。自己修改的时候，应该也是沿用soft reset
             # hard reset
             for i in range(2, self.k + 1):
                 self.names['v' + str(i)] = self.jit_hard_reset(self.names['v' + str(i)], spike_d,  self.v_reset)
 
     def forward(self, x: torch.Tensor):
-        return super().single_step_forward(x)
+        return super().single_step_forward(x)  # 这里相当于single_step_forward
 
     def extra_repr(self):
         return f"v_threshold={self.v_threshold}, v_reset={self.v_reset}, detach_reset={self.detach_reset}, " \
