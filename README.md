@@ -61,3 +61,23 @@ python SHD-SSC/main.py --neuron tclif --task SSC --beta1 0. --beta2 0. --thresho
 # feedforward: 700-128-135 paras: 110.8K
 python SHD-SSC/main.py --neuron tclif --task SSC --beta1 0. --beta2 0. --threshold 1.5 --gamma 0.5 --sg triangle --network ff
 ```
+### Node1
+```
+# S-MNIST feedforward
+python mn_train.py --neuron node1 --task SMNIST --threshold 1.0 --gamma 0.5 --sg triangle --network ff --ind 1
+```
+### Node2
+```
+# S-MNIST feedforward
+CUDA_VISIBLE_DEVICES=1 python mn_train.py --neuron node2 --threshold1 0.8 --threshold2 1.2 --task SMNIST --sg triangle --network ff --ind 1
+```
+### Node3
+```
+# S-MNIST feedforward
+CUDA_VISIBLE_DEVICES=2 python mn_train.py --neuron node3 --gamma1 0.5 --gamma2 0.7 --task SMNIST --sg triangle --network ff --ind 1
+```
+### Node4
+```
+# S-MNIST feedforward
+CUDA_VISIBLE_DEVICES=3 python mn_train.py --neuron node4 --threshold1 0.8 --threshold2 1.2 --task SMNIST --sg triangle --network ff --ind 1
+```
