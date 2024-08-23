@@ -49,7 +49,7 @@ class BaseNode(base.MemoryModule):
     @staticmethod
     @torch.jit.script
     def jit_hard_reset(v: torch.Tensor, spike: torch.Tensor, v_reset: float):
-        v = (1. - spike) * v + spike * v_reset
+        v = (1. - spike) * v + spike * v_reset  # 没什么用，一般都是用soft reset
 
         return v
 
@@ -142,7 +142,7 @@ class TCLIFNode(BaseNode):  # 关键在看懂这个node。其他的都是很简�
         else:
             spike_d = spike
 
-        if not self.hard_reset:
+        if not self.hard_reset:  # 需要修改这里以及上面的neuronal_charge
             # soft reset
             self.names['v1'] = self.jit_soft_reset(self.names['v1'], spike_d, self.gamma)  # 这是放电过程。gamma小于1使得树突室为部分放电
             self.names['v2'] = self.jit_soft_reset(self.names['v2'], spike_d, self.v_threshold)

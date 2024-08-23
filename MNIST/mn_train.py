@@ -14,6 +14,10 @@ from spiking_neuron.neuron import LIFNode
 from spiking_neuron.PLIF import ParametricLIFNode
 from spiking_neuron.TCLIF import TCLIFNode
 from spiking_neuron.ALIF import ALIF
+from spiking_neuron.Node1 import Node1
+from spiking_neuron.Node2 import Node2
+from spiking_neuron.Node3 import Node3
+from spiking_neuron.Node4 import Node4
 from load_dataset import load_dataset
 from models.fc import ffMnist, fbMnist
 from utils import *
@@ -152,12 +156,16 @@ parser.add_argument('--cos', action='store_true', default=False, help='use cosin
 # options for SNNs
 parser.add_argument('--time-window', default=784, type=int, help='')
 parser.add_argument('--threshold', default=1.0, type=float, help='')
+parser.add_argument('--threshold1', default=0.8, type=float, help='')
+parser.add_argument('--threshold2', default=1.2, type=float, help='')
 parser.add_argument('--detach-reset', action='store_true', default=False, help='')
 parser.add_argument('--hard-reset', action='store_true', default=False, help='')
 parser.add_argument('--decay-factor', default=1.0, type=float, help='')
 parser.add_argument('--beta1', default=0., type=float, help='')
 parser.add_argument('--beta2', default=0., type=float, help='')
 parser.add_argument('--gamma', default=0.5, type=float, help='dendritic reset scaling hyper-parameter')
+parser.add_argument('--gamma1', default=0.5, type=float)
+parser.add_argument('--gamma2', default=0.7, type=float)
 parser.add_argument('--sg', default='gau', type=str, help='sg: triangle, exp, gau, rectangle and sigmoid')
 parser.add_argument('--neuron', default='tclif', type=str, help='neuron: tclif, lif, alif and plif')
 parser.add_argument('--network', default='ff', type=str, help='network(recurrent or feedforward): fb, ff')
@@ -210,21 +218,33 @@ elif args.neuron == 'plif':
     node = ParametricLIFNode
 elif args.neuron == 'alif':
     node = ALIF
+elif args.neuron == 'node1':
+    node = Node1
+elif args.neuron == 'node2':
+    node = Node2
+    args.threshold = [[args.threshold1, args.threshold2]]
+elif args.neuron == 'node3':
+    node = Node3
+    args.gamma = [[args.gamma1, args.gamma2]]
+elif args.neuron == 'node4':
+    node = Node4
+    args.threshold = [[args.threshold1, args.threshold2]]
 
-# initialize the learnable betas
-beta = torch.full([1, 2], 0., dtype=torch.float)  # 创建一个size为(1, 2)的tensor，值全为0.
-beta[0][0] = args.beta1
-beta[0][1] = args.beta2
-init1 = torch.sigmoid(beta[0][0]).cpu().item()  # 对应论文中的-sigmoid(c1)
-init2 = torch.sigmoid(beta[0][1]).cpu().item()  # 对应论文中的sigmoid(c2)
-print("beta init from {:.2f} and {:.2f}".format(-init1, init2))
+# # initialize the learnable betas
+# beta = torch.full([1, 2], 0., dtype=torch.float)  # 创建一个size为(1, 2)的tensor，值全为0.
+# beta[0][0] = args.beta1
+# beta[0][1] = args.beta2
+# init1 = torch.sigmoid(beta[0][0]).cpu().item()  # 对应论文中的-sigmoid(c1)
+# init2 = torch.sigmoid(beta[0][1]).cpu().item()  # 对应论文中的sigmoid(c2)
+# # 值得注意的是，虽然论文里写的beta1是负数，但初始化的时候都是正数，体现在neuronal_charge里面减去beta1项
+# print("beta init from {:.2f} and {:.2f}".format(-init1, init2))
 
 spk_params = {"time_window": args.time_window,
               'v_threshold': args.threshold,
               'surrogate_function': SG.apply,
               'hard_reset': False,
               'detach_reset': False,
-              'decay_factor': beta,
+              # 'decay_factor': beta,
               'gamma': args.gamma}
 
 spiking_neuron = partial(node,  # 初始化神经元，partial为固定函数的部分形参，后续调用时不用再输入
@@ -232,12 +252,12 @@ spiking_neuron = partial(node,  # 初始化神经元，partial为固定函数的
                          surrogate_function=spk_params['surrogate_function'],
                          hard_reset=spk_params['hard_reset'],
                          detach_reset=spk_params['detach_reset'],
-                         decay_factor=spk_params['decay_factor'],
+                         # decay_factor=spk_params['decay_factor'],
                          gamma=spk_params['gamma'])
 
 if args.task == 'SMNIST':
     if args.network == 'ff':
-        model = ffMnist(in_dim=in_dim, spiking_neuron=spiking_neuron).to(gpu)  #
+        model = ffMnist(in_dim=in_dim, spiking_neuron=spiking_neuron).to(gpu)
     elif args.network == 'fb':
         model = fbMnist(in_dim=in_dim, spiking_neuron=spiking_neuron).to(gpu)
 elif args.task == 'PSMNIST':
